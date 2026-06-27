@@ -21,6 +21,16 @@ func main() {
 	// 开发时加载 .env.local；文件不存在不报错（生产用真实环境变量）。
 	_ = godotenv.Load(".env.local")
 
+	// 缺关键密钥时只告警、不阻止启动（方便首次试跑），但功能会受影响。
+	for _, e := range []struct{ key, impact string }{
+		{"APP_PASSWD", "login will always fail"},
+		{"JWT_SECRET", "tokens are signed with an empty secret (insecure)"},
+	} {
+		if os.Getenv(e.key) == "" {
+			log.Printf("WARNING: %s is not set — %s", e.key, e.impact)
+		}
+	}
+
 	// 数据位置可通过环境变量覆盖，便于容器里挂卷持久化。
 	handler.UploadDir = utils.EnvOr("UPLOAD_DIR", "uploads")
 	if err := os.MkdirAll(handler.UploadDir, 0o755); err != nil {
