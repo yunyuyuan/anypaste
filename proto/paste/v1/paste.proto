@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package paste.v1;
+
+option go_package = "./";
+
+service PasteService {
+  rpc CreatePaste(CreatePasteRequest) returns (CreatePasteResponse);
+  rpc ListPastes(ListPastesRequest) returns (ListPastesResponse);
+  rpc UpdatePaste(UpdatePasteRequest) returns (UpdatePasteResponse);
+  rpc DeletePaste(DeletePasteRequest) returns (DeletePasteResponse);
+}
+
+message PasteItem {
+  string id = 1;
+  string content = 2;
+  optional string view_passwd = 3;
+  optional int64 expired_at = 4;
+  optional string file_name = 5;
+}
+
+message CreatePasteRequest {
+  string content = 1;
+  optional string view_passwd = 2;
+  optional int64 expired_at = 3;
+}
+
+message CreatePasteResponse {
+  bool success = 1;
+  string id = 2;
+}
+
+message ListPastesRequest {}
+
+message ListPastesResponse {
+  repeated PasteItem list = 1;
+}
+
+message UpdatePasteRequest {
+  string id = 1;
+  string content = 2;
+  optional int64 expired_at = 3;
+}
+
+message UpdatePasteResponse {
+  bool success = 1;
+}
+
+message DeletePasteRequest {
+  string id = 1;
+}
+
+message DeletePasteResponse {
+  bool success = 1;
+}

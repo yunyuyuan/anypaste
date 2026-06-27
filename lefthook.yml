@@ -1,0 +1,12 @@
+pre-commit:
+  parallel: true
+  commands:
+    eslint:
+      glob: "*.{js,ts,jsx,tsx}"
+      stage_fixed: true
+      run: pnpm eslint --fix {staged_files}
+      root: web/
+
+    golangci-lint:
+      glob: "*.go"
+      run: golangci-lint run --fix

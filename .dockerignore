@@ -1,0 +1,11 @@
+.git
+.github
+**/node_modules
+web/dist
+cli-dist
+data.db
+/uploads
+*.exe
+.env
+.env.*
+*.md

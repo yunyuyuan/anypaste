@@ -1,0 +1,56 @@
+name: release
+
+# Manual release only: the build runs when you push a version tag, never on
+# ordinary pushes or PRs.
+#
+#   git tag v1.2.3
+#   git push origin v1.2.3
+on:
+  push:
+    tags:
+      - "v*"
+
+# Least privilege: read the repo, write packages (GHCR).
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # QEMU lets one runner build the arm64 image as well as amd64.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Derive image tags/labels from the git tag (e.g. v1.2.3 -> 1.2.3, 1.2, latest).
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache across releases via the GitHub Actions cache backend.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
