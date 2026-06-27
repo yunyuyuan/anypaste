@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"yunyuyuan/anypaste/gen/paste/v1/pastev1connect"
 	"yunyuyuan/anypaste/internal/auth"
+	"yunyuyuan/anypaste/internal/cleanup"
 	"yunyuyuan/anypaste/internal/handler"
 	"yunyuyuan/anypaste/internal/model"
 	"yunyuyuan/anypaste/internal/service"
@@ -47,6 +49,9 @@ func main() {
 	}
 
 	pasteService := service.NewPasteService(model.NewPasteRepo(db))
+
+	// 后台每天清理一次没有任何 paste 引用的孤儿上传文件。
+	cleanup.Start(context.Background(), pasteService, handler.UploadDir)
 
 	// 所有后端接口都挂在 apiMux 上（根相对路径）。
 	apiMux := http.NewServeMux()

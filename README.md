@@ -8,9 +8,7 @@ cross-platform CLI for the terminal.
 
 - **Text pastes & file uploads** — create a note or upload any file; large
   uploads stream with progress and resumable downloads (HTTP Range).
-- **Expiration** — set an optional expiry per paste; expired pastes are hidden
-  automatically.
-- **Edit** — change a paste's content or expiry from the web UI.
+- **Edit** — change a paste's content from the web UI.
 - **Manage** — list, view, copy, download, and delete from a clean web UI.
 - **Single-password auth** — log in with one admin password; the session is a
   JWT kept in a cookie.

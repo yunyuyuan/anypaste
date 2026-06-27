@@ -6,7 +6,6 @@ import (
 	pastev1 "yunyuyuan/anypaste/gen/paste/v1"
 	"yunyuyuan/anypaste/internal/model"
 	"yunyuyuan/anypaste/internal/service"
-	"yunyuyuan/anypaste/internal/utils"
 )
 
 type PasteHandler struct {
@@ -22,9 +21,7 @@ func (h *PasteHandler) CreatePaste(
 	req *pastev1.CreatePasteRequest,
 ) (*pastev1.CreatePasteResponse, error) {
 	pasteItem, err := h.svc.CreatePaste(ctx, &model.Paste{
-		Content:    req.Content,
-		ViewPasswd: req.ViewPasswd,
-		ExpiredAt:  utils.TimestampToTime(req.ExpiredAt),
+		Content: req.Content,
 	})
 	if err != nil {
 		return nil, err
@@ -39,7 +36,7 @@ func (h *PasteHandler) UpdatePaste(
 	ctx context.Context,
 	req *pastev1.UpdatePasteRequest,
 ) (*pastev1.UpdatePasteResponse, error) {
-	if err := h.svc.UpdatePaste(ctx, req.Id, req.Content, utils.TimestampToTime(req.ExpiredAt)); err != nil {
+	if err := h.svc.UpdatePaste(ctx, req.Id, req.Content); err != nil {
 		return nil, err
 	}
 	return &pastev1.UpdatePasteResponse{

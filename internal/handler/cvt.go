@@ -6,16 +6,9 @@ import (
 )
 
 func PasteModelToProto(pasteItem *model.Paste) *pastev1.PasteItem {
-	var expiredAt *int64
-	if pasteItem.ExpiredAt != nil {
-		v := pasteItem.ExpiredAt.UnixMilli()
-		expiredAt = &v
-	}
 	return &pastev1.PasteItem{
-		Id:         pasteItem.ID,
-		Content:    pasteItem.Content,
-		ViewPasswd: pasteItem.ViewPasswd,
-		ExpiredAt:  expiredAt,
-		FileName:   pasteItem.FileName,
+		Id:       pasteItem.ID,
+		Content:  pasteItem.Content,
+		FileName: pasteItem.FileName,
 	}
 }

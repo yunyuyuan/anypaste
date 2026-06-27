@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 	"yunyuyuan/anypaste/internal/model"
 )
 
@@ -50,10 +49,14 @@ func (s *PasteService) UpdatePasteFileName(
 func (s *PasteService) UpdatePaste(
 	ctx context.Context,
 	id, content string,
-	expiredAt *time.Time,
 ) error {
-	_, err := s.repo.UpdatePaste(ctx, id, content, expiredAt)
+	_, err := s.repo.UpdatePaste(ctx, id, content)
 	return err
+}
+
+// ReferencedFileNames returns the saved file names still referenced by a paste.
+func (s *PasteService) ReferencedFileNames(ctx context.Context) ([]string, error) {
+	return s.repo.ReferencedFileNames(ctx)
 }
 
 func (s *PasteService) DeletePaste(

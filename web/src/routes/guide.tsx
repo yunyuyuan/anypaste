@@ -21,7 +21,7 @@ const COMMANDS: { cmd: string; desc: string }[] = [
   },
   {
     cmd: "anypaste ls",
-    desc: "List your pastes: id, type (text/file), a content preview or file name, and the expiry if set.",
+    desc: "List your pastes: id, type (text/file), and a content preview or file name.",
   },
   {
     cmd: 'anypaste up -m "some text"',
@@ -30,10 +30,6 @@ const COMMANDS: { cmd: string; desc: string }[] = [
   {
     cmd: "anypaste up ./report.pdf",
     desc: "Create a paste and upload a file. Combine with -m to set the text content too.",
-  },
-  {
-    cmd: "anypaste up -m note ./a.pdf --expire 24h",
-    desc: "Create a paste that expires after the given duration (e.g. 30m, 24h, 168h).",
   },
   {
     cmd: "anypaste down <id> -o ./out.pdf",

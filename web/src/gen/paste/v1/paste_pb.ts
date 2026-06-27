@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file paste/v1/paste.proto.
  */
 export const file_paste_v1_paste: GenFile = /*@__PURE__*/
-  fileDesc("ChRwYXN0ZS92MS9wYXN0ZS5wcm90bxIIcGFzdGUudjEioAEKCVBhc3RlSXRlbRIKCgJpZBgBIAEoCRIPCgdjb250ZW50GAIgASgJEhgKC3ZpZXdfcGFzc3dkGAMgASgJSACIAQESFwoKZXhwaXJlZF9hdBgEIAEoA0gBiAEBEhYKCWZpbGVfbmFtZRgFIAEoCUgCiAEBQg4KDF92aWV3X3Bhc3N3ZEINCgtfZXhwaXJlZF9hdEIMCgpfZmlsZV9uYW1lIncKEkNyZWF0ZVBhc3RlUmVxdWVzdBIPCgdjb250ZW50GAEgASgJEhgKC3ZpZXdfcGFzc3dkGAIgASgJSACIAQESFwoKZXhwaXJlZF9hdBgDIAEoA0gBiAEBQg4KDF92aWV3X3Bhc3N3ZEINCgtfZXhwaXJlZF9hdCIyChNDcmVhdGVQYXN0ZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSCgoCaWQYAiABKAkiEwoRTGlzdFBhc3Rlc1JlcXVlc3QiNwoSTGlzdFBhc3Rlc1Jlc3BvbnNlEiEKBGxpc3QYASADKAsyEy5wYXN0ZS52MS5QYXN0ZUl0ZW0iWQoSVXBkYXRlUGFzdGVSZXF1ZXN0EgoKAmlkGAEgASgJEg8KB2NvbnRlbnQYAiABKAkSFwoKZXhwaXJlZF9hdBgDIAEoA0gAiAEBQg0KC19leHBpcmVkX2F0IiYKE1VwZGF0ZVBhc3RlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCIgChJEZWxldGVQYXN0ZVJlcXVlc3QSCgoCaWQYASABKAkiJgoTRGVsZXRlUGFzdGVSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIMrsCCgxQYXN0ZVNlcnZpY2USSgoLQ3JlYXRlUGFzdGUSHC5wYXN0ZS52MS5DcmVhdGVQYXN0ZVJlcXVlc3QaHS5wYXN0ZS52MS5DcmVhdGVQYXN0ZVJlc3BvbnNlEkcKCkxpc3RQYXN0ZXMSGy5wYXN0ZS52MS5MaXN0UGFzdGVzUmVxdWVzdBocLnBhc3RlLnYxLkxpc3RQYXN0ZXNSZXNwb25zZRJKCgtVcGRhdGVQYXN0ZRIcLnBhc3RlLnYxLlVwZGF0ZVBhc3RlUmVxdWVzdBodLnBhc3RlLnYxLlVwZGF0ZVBhc3RlUmVzcG9uc2USSgoLRGVsZXRlUGFzdGUSHC5wYXN0ZS52MS5EZWxldGVQYXN0ZVJlcXVlc3QaHS5wYXN0ZS52MS5EZWxldGVQYXN0ZVJlc3BvbnNlQoQBCgxjb20ucGFzdGUudjFCClBhc3RlUHJvdG9QAVoneXVueXV5dWFuL2FueXBhc3RlL2dlbi9wYXN0ZS92MTtwYXN0ZXYxogIDUFhYqgIIUGFzdGUuVjHKAghQYXN0ZVxWMeICFFBhc3RlXFYxXEdQQk1ldGFkYXRh6gIJUGFzdGU6OlYxYgZwcm90bzM");
+  fileDesc("ChRwYXN0ZS92MS9wYXN0ZS5wcm90bxIIcGFzdGUudjEiTgoJUGFzdGVJdGVtEgoKAmlkGAEgASgJEg8KB2NvbnRlbnQYAiABKAkSFgoJZmlsZV9uYW1lGAUgASgJSACIAQFCDAoKX2ZpbGVfbmFtZSIlChJDcmVhdGVQYXN0ZVJlcXVlc3QSDwoHY29udGVudBgBIAEoCSIyChNDcmVhdGVQYXN0ZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSCgoCaWQYAiABKAkiEwoRTGlzdFBhc3Rlc1JlcXVlc3QiNwoSTGlzdFBhc3Rlc1Jlc3BvbnNlEiEKBGxpc3QYASADKAsyEy5wYXN0ZS52MS5QYXN0ZUl0ZW0iMQoSVXBkYXRlUGFzdGVSZXF1ZXN0EgoKAmlkGAEgASgJEg8KB2NvbnRlbnQYAiABKAkiJgoTVXBkYXRlUGFzdGVSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIiAKEkRlbGV0ZVBhc3RlUmVxdWVzdBIKCgJpZBgBIAEoCSImChNEZWxldGVQYXN0ZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgyuwIKDFBhc3RlU2VydmljZRJKCgtDcmVhdGVQYXN0ZRIcLnBhc3RlLnYxLkNyZWF0ZVBhc3RlUmVxdWVzdBodLnBhc3RlLnYxLkNyZWF0ZVBhc3RlUmVzcG9uc2USRwoKTGlzdFBhc3RlcxIbLnBhc3RlLnYxLkxpc3RQYXN0ZXNSZXF1ZXN0GhwucGFzdGUudjEuTGlzdFBhc3Rlc1Jlc3BvbnNlEkoKC1VwZGF0ZVBhc3RlEhwucGFzdGUudjEuVXBkYXRlUGFzdGVSZXF1ZXN0Gh0ucGFzdGUudjEuVXBkYXRlUGFzdGVSZXNwb25zZRJKCgtEZWxldGVQYXN0ZRIcLnBhc3RlLnYxLkRlbGV0ZVBhc3RlUmVxdWVzdBodLnBhc3RlLnYxLkRlbGV0ZVBhc3RlUmVzcG9uc2VChAEKDGNvbS5wYXN0ZS52MUIKUGFzdGVQcm90b1ABWid5dW55dXl1YW4vYW55cGFzdGUvZ2VuL3Bhc3RlL3YxO3Bhc3RldjGiAgNQWFiqAghQYXN0ZS5WMcoCCFBhc3RlXFYx4gIUUGFzdGVcVjFcR1BCTWV0YWRhdGHqAglQYXN0ZTo6VjFiBnByb3RvMw");
 
 /**
  * @generated from message paste.v1.PasteItem
@@ -25,16 +25,6 @@ export type PasteItem = Message<"paste.v1.PasteItem"> & {
    * @generated from field: string content = 2;
    */
   content: string;
-
-  /**
-   * @generated from field: optional string view_passwd = 3;
-   */
-  viewPasswd?: string | undefined;
-
-  /**
-   * @generated from field: optional int64 expired_at = 4;
-   */
-  expiredAt?: bigint | undefined;
 
   /**
    * @generated from field: optional string file_name = 5;
@@ -57,16 +47,6 @@ export type CreatePasteRequest = Message<"paste.v1.CreatePasteRequest"> & {
    * @generated from field: string content = 1;
    */
   content: string;
-
-  /**
-   * @generated from field: optional string view_passwd = 2;
-   */
-  viewPasswd?: string | undefined;
-
-  /**
-   * @generated from field: optional int64 expired_at = 3;
-   */
-  expiredAt?: bigint | undefined;
 };
 
 /**
@@ -141,11 +121,6 @@ export type UpdatePasteRequest = Message<"paste.v1.UpdatePasteRequest"> & {
    * @generated from field: string content = 2;
    */
   content: string;
-
-  /**
-   * @generated from field: optional int64 expired_at = 3;
-   */
-  expiredAt?: bigint | undefined;
 };
 
 /**

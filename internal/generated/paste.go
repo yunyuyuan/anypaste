@@ -7,19 +7,15 @@ import (
 )
 
 var Paste = struct {
-	ID         field.String
-	Content    field.String
-	FileName   field.String
-	ViewPasswd field.String
-	ExpiredAt  field.Time
-	CreatedAt  field.Time
-	UpdatedAt  field.Time
+	ID        field.String
+	Content   field.String
+	FileName  field.String
+	CreatedAt field.Time
+	UpdatedAt field.Time
 }{
-	ID:         field.String{}.WithColumn("id"),
-	Content:    field.String{}.WithColumn("content"),
-	FileName:   field.String{}.WithColumn("file_name"),
-	ViewPasswd: field.String{}.WithColumn("view_passwd"),
-	ExpiredAt:  field.Time{}.WithColumn("expired_at"),
-	CreatedAt:  field.Time{}.WithColumn("created_at"),
-	UpdatedAt:  field.Time{}.WithColumn("updated_at"),
+	ID:        field.String{}.WithColumn("id"),
+	Content:   field.String{}.WithColumn("content"),
+	FileName:  field.String{}.WithColumn("file_name"),
+	CreatedAt: field.Time{}.WithColumn("created_at"),
+	UpdatedAt: field.Time{}.WithColumn("updated_at"),
 }

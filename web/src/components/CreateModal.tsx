@@ -9,8 +9,6 @@ export default function () {
   const [isOpen, setIsOpen] = useState(false);
 
   const [content, setContent] = useState<string>("");
-  // datetime-local 的值（本地时间，"YYYY-MM-DDTHH:mm"），空字符串表示永不过期
-  const [expiredAt, setExpiredAt] = useState<string>("");
   const [file, setFile] = useState<File>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -93,8 +91,6 @@ export default function () {
     setUploadProgress(0);
     createItem({
       content,
-      // 本地时间字符串转成 epoch 毫秒；为空则不传，表示永不过期
-      expiredAt: expiredAt ? BigInt(new Date(expiredAt).getTime()) : undefined,
     }, {
       onSuccess: (res) => {
         // 选了文件就走上传，否则是纯文本 paste
@@ -152,15 +148,6 @@ export default function () {
                       {file ? file.name : "No file chosen"}
                     </span>
                   </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label>Expires at (optional)</Label>
-                  <input
-                    type="datetime-local"
-                    value={expiredAt}
-                    onChange={event => setExpiredAt(event.target.value)}
-                    className="rounded-md border border-default px-2 py-1.5 text-sm"
-                  />
                 </div>
                 {uploading ? (
                   <ProgressBar

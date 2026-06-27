@@ -30,7 +30,6 @@ Usage:
   anypaste login --server {base}/api     Log in (prompts for the password)
   anypaste up -m "some text"             Create a text paste
   anypaste up ./report.pdf               Create a paste and upload a file
-  anypaste up -m note ./f --expire 24h   ...with an expiry (e.g. 30m, 24h)
   anypaste ls                            List pastes
   anypaste down <id> -o ./out.pdf        Download a paste's file (id is enough)
   anypaste logout                        Forget the stored token

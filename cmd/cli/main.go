@@ -17,9 +17,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
 )
 
 const usage = `anypaste - tiny CLI for an anypaste server
@@ -27,7 +25,7 @@ const usage = `anypaste - tiny CLI for an anypaste server
 Usage:
   anypaste login   [--server URL] [--password PW]   Log in and store the token
   anypaste ls      [--server URL]                   List pastes
-  anypaste up      [--server URL] [-m TEXT] [--expire DUR] [FILE]
+  anypaste up      [--server URL] [-m TEXT] [FILE]
                                                     Create a paste, optionally uploading FILE
   anypaste down ID [--server URL] [-o OUT]          Download the file of paste ID
   anypaste logout                                   Forget the stored token
@@ -45,7 +43,7 @@ Examples:
   echo hi | anypaste up -m -            # read content from stdin
   anypaste up -m "a note"
   anypaste up ./report.pdf
-  anypaste up -m "with file" ./report.pdf --expire 24h
+  anypaste up -m "with file" ./report.pdf
   anypaste ls
   anypaste down AbC123 -o ./report.pdf
 `
@@ -159,10 +157,9 @@ func callRPC(server, token, procedure string, req, out any) error {
 // --- message shapes (protobuf JSON: int64 is encoded as a string) ----------
 
 type pasteItem struct {
-	ID        string `json:"id"`
-	Content   string `json:"content"`
-	FileName  string `json:"fileName"`
-	ExpiredAt string `json:"expiredAt"`
+	ID       string `json:"id"`
+	Content  string `json:"content"`
+	FileName string `json:"fileName"`
 }
 
 type listResp struct {
@@ -170,8 +167,7 @@ type listResp struct {
 }
 
 type createReq struct {
-	Content   string `json:"content"`
-	ExpiredAt string `json:"expiredAt,omitempty"`
+	Content string `json:"content"`
 }
 
 type createResp struct {
@@ -262,7 +258,7 @@ func cmdList(args []string) error {
 			kind = "file"
 			extra = it.FileName
 		}
-		fmt.Printf("%-8s  %-4s  %s%s\n", it.ID, kind, extra, formatExpiry(it.ExpiredAt))
+		fmt.Printf("%-8s  %-4s  %s\n", it.ID, kind, extra)
 	}
 	return nil
 }
@@ -271,7 +267,6 @@ func cmdUp(args []string) error {
 	fs := newFlagSet("up")
 	server := fs.String("server", "", "server URL")
 	message := fs.String("m", "", `text content ("-" reads stdin)`)
-	expire := fs.Duration("expire", 0, "expire after this duration (e.g. 24h)")
 	_ = fs.Parse(args)
 
 	c := loadConfig()
@@ -299,10 +294,6 @@ func cmdUp(args []string) error {
 	}
 
 	req := createReq{Content: content}
-	if *expire > 0 {
-		ms := time.Now().Add(*expire).UnixMilli()
-		req.ExpiredAt = strconv.FormatInt(ms, 10)
-	}
 
 	var cr createResp
 	if err := callRPC(srv, c.Token, "/paste.v1.PasteService/CreatePaste", req, &cr); err != nil {
@@ -432,17 +423,6 @@ func oneLine(s string, max int) string {
 		return s[:max-1] + "…"
 	}
 	return s
-}
-
-func formatExpiry(ms string) string {
-	if ms == "" {
-		return ""
-	}
-	n, err := strconv.ParseInt(ms, 10, 64)
-	if err != nil {
-		return ""
-	}
-	return "  (expires " + time.UnixMilli(n).Format("2006-01-02 15:04") + ")"
 }
 
 func filenameFromResponse(resp *http.Response, fallback string) string {

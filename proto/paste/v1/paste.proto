@@ -14,15 +14,11 @@ service PasteService {
 message PasteItem {
   string id = 1;
   string content = 2;
-  optional string view_passwd = 3;
-  optional int64 expired_at = 4;
   optional string file_name = 5;
 }
 
 message CreatePasteRequest {
   string content = 1;
-  optional string view_passwd = 2;
-  optional int64 expired_at = 3;
 }
 
 message CreatePasteResponse {
@@ -39,7 +35,6 @@ message ListPastesResponse {
 message UpdatePasteRequest {
   string id = 1;
   string content = 2;
-  optional int64 expired_at = 3;
 }
 
 message UpdatePasteResponse {

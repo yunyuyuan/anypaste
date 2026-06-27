@@ -25,8 +25,6 @@ type PasteItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	ViewPasswd    *string                `protobuf:"bytes,3,opt,name=view_passwd,json=viewPasswd,proto3,oneof" json:"view_passwd,omitempty"`
-	ExpiredAt     *int64                 `protobuf:"varint,4,opt,name=expired_at,json=expiredAt,proto3,oneof" json:"expired_at,omitempty"`
 	FileName      *string                `protobuf:"bytes,5,opt,name=file_name,json=fileName,proto3,oneof" json:"file_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -76,20 +74,6 @@ func (x *PasteItem) GetContent() string {
 	return ""
 }
 
-func (x *PasteItem) GetViewPasswd() string {
-	if x != nil && x.ViewPasswd != nil {
-		return *x.ViewPasswd
-	}
-	return ""
-}
-
-func (x *PasteItem) GetExpiredAt() int64 {
-	if x != nil && x.ExpiredAt != nil {
-		return *x.ExpiredAt
-	}
-	return 0
-}
-
 func (x *PasteItem) GetFileName() string {
 	if x != nil && x.FileName != nil {
 		return *x.FileName
@@ -100,8 +84,6 @@ func (x *PasteItem) GetFileName() string {
 type CreatePasteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
-	ViewPasswd    *string                `protobuf:"bytes,2,opt,name=view_passwd,json=viewPasswd,proto3,oneof" json:"view_passwd,omitempty"`
-	ExpiredAt     *int64                 `protobuf:"varint,3,opt,name=expired_at,json=expiredAt,proto3,oneof" json:"expired_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -141,20 +123,6 @@ func (x *CreatePasteRequest) GetContent() string {
 		return x.Content
 	}
 	return ""
-}
-
-func (x *CreatePasteRequest) GetViewPasswd() string {
-	if x != nil && x.ViewPasswd != nil {
-		return *x.ViewPasswd
-	}
-	return ""
-}
-
-func (x *CreatePasteRequest) GetExpiredAt() int64 {
-	if x != nil && x.ExpiredAt != nil {
-		return *x.ExpiredAt
-	}
-	return 0
 }
 
 type CreatePasteResponse struct {
@@ -293,7 +261,6 @@ type UpdatePasteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	ExpiredAt     *int64                 `protobuf:"varint,3,opt,name=expired_at,json=expiredAt,proto3,oneof" json:"expired_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -340,13 +307,6 @@ func (x *UpdatePasteRequest) GetContent() string {
 		return x.Content
 	}
 	return ""
-}
-
-func (x *UpdatePasteRequest) GetExpiredAt() int64 {
-	if x != nil && x.ExpiredAt != nil {
-		return *x.ExpiredAt
-	}
-	return 0
 }
 
 type UpdatePasteResponse struct {
@@ -485,39 +445,24 @@ var File_paste_v1_paste_proto protoreflect.FileDescriptor
 
 const file_paste_v1_paste_proto_rawDesc = "" +
 	"\n" +
-	"\x14paste/v1/paste.proto\x12\bpaste.v1\"\xce\x01\n" +
+	"\x14paste/v1/paste.proto\x12\bpaste.v1\"e\n" +
 	"\tPasteItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\x12$\n" +
-	"\vview_passwd\x18\x03 \x01(\tH\x00R\n" +
-	"viewPasswd\x88\x01\x01\x12\"\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12 \n" +
+	"\tfile_name\x18\x05 \x01(\tH\x00R\bfileName\x88\x01\x01B\f\n" +
 	"\n" +
-	"expired_at\x18\x04 \x01(\x03H\x01R\texpiredAt\x88\x01\x01\x12 \n" +
-	"\tfile_name\x18\x05 \x01(\tH\x02R\bfileName\x88\x01\x01B\x0e\n" +
-	"\f_view_passwdB\r\n" +
-	"\v_expired_atB\f\n" +
-	"\n" +
-	"_file_name\"\x97\x01\n" +
+	"_file_name\".\n" +
 	"\x12CreatePasteRequest\x12\x18\n" +
-	"\acontent\x18\x01 \x01(\tR\acontent\x12$\n" +
-	"\vview_passwd\x18\x02 \x01(\tH\x00R\n" +
-	"viewPasswd\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"expired_at\x18\x03 \x01(\x03H\x01R\texpiredAt\x88\x01\x01B\x0e\n" +
-	"\f_view_passwdB\r\n" +
-	"\v_expired_at\"?\n" +
+	"\acontent\x18\x01 \x01(\tR\acontent\"?\n" +
 	"\x13CreatePasteResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\"\x13\n" +
 	"\x11ListPastesRequest\"=\n" +
 	"\x12ListPastesResponse\x12'\n" +
-	"\x04list\x18\x01 \x03(\v2\x13.paste.v1.PasteItemR\x04list\"q\n" +
+	"\x04list\x18\x01 \x03(\v2\x13.paste.v1.PasteItemR\x04list\">\n" +
 	"\x12UpdatePasteRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\x12\"\n" +
-	"\n" +
-	"expired_at\x18\x03 \x01(\x03H\x00R\texpiredAt\x88\x01\x01B\r\n" +
-	"\v_expired_at\"/\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\"/\n" +
 	"\x13UpdatePasteResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"$\n" +
 	"\x12DeletePasteRequest\x12\x0e\n" +
@@ -580,8 +525,6 @@ func file_paste_v1_paste_proto_init() {
 		return
 	}
 	file_paste_v1_paste_proto_msgTypes[0].OneofWrappers = []any{}
-	file_paste_v1_paste_proto_msgTypes[1].OneofWrappers = []any{}
-	file_paste_v1_paste_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
