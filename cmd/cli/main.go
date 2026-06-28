@@ -18,12 +18,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 const usage = `anypaste - tiny CLI for an anypaste server
 
 Usage:
-  anypaste login   [--server URL] [--password PW]   Log in and store the token
+  anypaste login   [--server URL] [--password PW]   Log in (session lasts 1h)
   anypaste ls      [--server URL]                   List pastes
   anypaste up      [--server URL] [-m TEXT] [FILE]
                                                     Create a paste, optionally uploading FILE
@@ -194,12 +196,14 @@ func cmdLogin(args []string) error {
 		pw = os.Getenv("ANYPASTE_PASSWORD")
 	}
 	if pw == "" {
-		fmt.Fprint(os.Stderr, "Password: ")
-		line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-		pw = strings.TrimRight(line, "\r\n")
+		var err error
+		if pw, err = promptPassword(); err != nil {
+			return err
+		}
 	}
 
-	body, _ := json.Marshal(map[string]string{"password": pw})
+	// CLI sessions are short-lived (1h); the server clamps this.
+	body, _ := json.Marshal(map[string]any{"password": pw, "ttl_seconds": 3600})
 	resp, err := http.Post(srv+"/login", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -223,6 +227,23 @@ func cmdLogin(args []string) error {
 	}
 	fmt.Println("Logged in. Token saved.")
 	return nil
+}
+
+// promptPassword reads a password from the terminal without echoing it. If
+// stdin is not a terminal (e.g. piped), it falls back to reading a line.
+func promptPassword() (string, error) {
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		fmt.Fprint(os.Stderr, "Password: ")
+		b, err := term.ReadPassword(fd)
+		fmt.Fprintln(os.Stderr) // the Enter keypress wasn't echoed
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
+	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	return strings.TrimRight(line, "\r\n"), nil
 }
 
 func cmdLogout([]string) error {

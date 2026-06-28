@@ -67,9 +67,9 @@ function FileFace(props: { ext: string; content: string }) {
 function HoverOverlay(props: { actions: OverlayAction[] }) {
   return (
     <div
-      className="absolute inset-0 z-10 flex items-center justify-center gap-3
+      className="absolute inset-0 z-10 hidden items-center justify-center gap-3
                  bg-white/30 backdrop-blur-sm opacity-0 transition-opacity
-                 duration-200 group-hover:opacity-100"
+                 duration-200 group-hover:opacity-100 sm:flex"
     >
       {props.actions.map((action) => (
         <Tooltip key={action.key} delay={300}>

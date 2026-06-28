@@ -22,6 +22,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	var body struct {
 		Password string `json:"password"`
+		// TTLSeconds lets a client request a shorter session (the CLI asks for 1h);
+		// omitted/0 means the default. Clamped to [60s, DefaultTokenTTL].
+		TTLSeconds int64 `json:"ttl_seconds"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
@@ -35,7 +38,17 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.IssueToken()
+	var ttl time.Duration
+	if body.TTLSeconds > 0 {
+		ttl = time.Duration(body.TTLSeconds) * time.Second
+		if ttl > auth.DefaultTokenTTL {
+			ttl = auth.DefaultTokenTTL
+		} else if ttl < time.Minute {
+			ttl = time.Minute
+		}
+	}
+
+	token, err := auth.IssueToken(ttl)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

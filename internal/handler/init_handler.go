@@ -46,8 +46,8 @@ func initHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log the new admin straight in.
-	token, err := auth.IssueToken()
+	// Log the new admin straight in (default session length).
+	token, err := auth.IssueToken(0)
 	if err != nil {
 		http.Error(w, "issue token failed", http.StatusInternalServerError)
 		return

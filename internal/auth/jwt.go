@@ -23,19 +23,26 @@ func jwtSecret() []byte {
 	return []byte(store.JwtSecret())
 }
 
-const tokenTTL = 24 * 7 * time.Hour
+// DefaultTokenTTL is the session lifetime used when a caller passes ttl <= 0
+// (e.g. the web login). It also doubles as the upper bound callers should clamp
+// any client-requested TTL to.
+const DefaultTokenTTL = 24 * 7 * time.Hour
 
 type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func IssueToken() (string, error) {
+// IssueToken signs a session token valid for ttl; ttl <= 0 falls back to DefaultTokenTTL.
+func IssueToken(ttl time.Duration) (string, error) {
+	if ttl <= 0 {
+		ttl = DefaultTokenTTL
+	}
 	now := time.Now()
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "admin",
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(tokenTTL)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 			Issuer:    "owner",
 		},
 	}

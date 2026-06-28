@@ -17,7 +17,11 @@ export default function Header() {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-default px-8 py-3">
       <div className="flex items-center gap-4">
-        <a href={import.meta.env.BASE_URL} className="flex items-center gap-2">
+        {/* 移动端隐藏图标+标题，只留按钮，避免 header 太挤 */}
+        <a
+          href={import.meta.env.BASE_URL}
+          className="hidden items-center gap-2 sm:flex"
+        >
           <img
             src={`${import.meta.env.BASE_URL}logo192.png`}
             alt="AnyPaste"

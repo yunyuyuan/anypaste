@@ -9,6 +9,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.53.0
+	golang.org/x/term v0.44.0
 	google.golang.org/protobuf v1.36.11
 	gorm.io/cli/gorm v0.2.4
 	gorm.io/gorm v1.31.1

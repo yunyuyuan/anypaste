@@ -1,4 +1,7 @@
-import { updatePaste } from "#/gen/paste/v1/paste-PasteService_connectquery";
+import {
+  deletePaste,
+  updatePaste,
+} from "#/gen/paste/v1/paste-PasteService_connectquery";
 import type { PasteItem } from "#/gen/paste/v1/paste_pb";
 import { parseApiPath, queryClient } from "#/req";
 import { useMutation } from "@connectrpc/connect-query";
@@ -10,7 +13,7 @@ import {
   Tooltip,
   toast,
 } from "@heroui/react";
-import { Copy, Download, FileText, Loader2 } from "lucide-react";
+import { Copy, Download, FileText, Loader2, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function copyText(text: string) {
@@ -37,6 +40,8 @@ export default function PasteDetailModal(props: {
   const [draft, setDraft] = useState(item.content);
   const { mutateAsync: updateItem, isPending: isSaving } =
     useMutation(updatePaste);
+  const { mutateAsync: deleteItem, isPending: isDeleting } =
+    useMutation(deletePaste);
 
   // 每次打开弹窗时，用最新内容重置编辑草稿
   useEffect(() => {
@@ -45,19 +50,44 @@ export default function PasteDetailModal(props: {
 
   const isDirty = draft !== item.content;
 
-  const save = async () => {
-    await updateItem({ id: item.id, content: draft });
+  const refreshList = () =>
     queryClient.invalidateQueries({
       queryKey: ["connect-query", { methodName: "ListPastes" }],
     });
+
+  const save = async () => {
+    await updateItem({ id: item.id, content: draft });
+    refreshList();
     onOpenChange(false);
+  };
+
+  const remove = () => {
+    toast.promise(
+      (async () => {
+        await deleteItem({ id: item.id });
+        refreshList();
+        onOpenChange(false);
+      })(),
+      { loading: "Deleting...", success: "Deleted", error: "Failed to delete" },
+    );
   };
 
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
       <Modal.Backdrop>
         <Modal.Container>
-          <Modal.Dialog>
+          <Modal.Dialog className="relative">
+            {/* 右上角关闭 X（替代原来的 Close 按钮） */}
+            <Button
+              slot="close"
+              isIconOnly
+              variant="ghost"
+              size="sm"
+              aria-label="Close"
+              className="absolute right-3 top-3"
+            >
+              <X className="h-4 w-4" />
+            </Button>
             <Modal.Header>
               <Modal.Heading>Note detail</Modal.Heading>
             </Modal.Header>
@@ -90,8 +120,17 @@ export default function PasteDetailModal(props: {
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button slot="close" variant="secondary">
-                Close
+              <Button
+                variant="danger-soft"
+                onClick={remove}
+                isPending={isDeleting}
+              >
+                {isDeleting ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Delete
               </Button>
               <Button onClick={() => copyText(draft)}>
                 <Copy /> Copy
