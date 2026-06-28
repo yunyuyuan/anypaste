@@ -1,6 +1,7 @@
 /data.db
 /uploads
 /cli-dist
+/config.json
 
 # Frontend build copied in for go:embed — keep only the committed placeholder
 /internal/web/dist/*

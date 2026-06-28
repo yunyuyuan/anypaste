@@ -4,18 +4,23 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
+	"yunyuyuan/anypaste/internal/config"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// jwtSecret 在调用时读取，而不是包加载时——否则 main() 里加载 .env 之前
-// 它就已经被求值成空了。
+// store holds the JWT secret and admin password hash. main() injects it via
+// UseStore before the server starts serving.
+var store *config.Store
+
+// UseStore wires the config store the auth package reads its secrets from.
+func UseStore(s *config.Store) { store = s }
+
 func jwtSecret() []byte {
-	return []byte(os.Getenv("JWT_SECRET"))
+	return []byte(store.JwtSecret())
 }
 
 const tokenTTL = 24 * 7 * time.Hour

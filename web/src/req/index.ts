@@ -56,6 +56,27 @@ export const parseApiPath = (path: string) => {
   return `${API_BASE}/${path.replace(/^\//, "")}`;
 };
 
+// 首次运行检查：后端是否已设置管理员密码。未初始化则前端跳设置页。
+export const getStatus = async (): Promise<{ initialized: boolean }> => {
+  const res = await fetch(parseApiPath("/status"));
+  if (!res.ok) throw new Error("status check failed");
+  return res.json();
+};
+
+// 初始化：设置管理员密码，后端写入配置文件并直接下发 token（即登录）。
+export const initPassword = async (password: string): Promise<void> => {
+  const res = await fetch(parseApiPath("/init"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    throw new Error((await res.text()).trim() || "Setup failed");
+  }
+  const data: { token: string } = await res.json();
+  setToken(data.token);
+};
+
 // 登录：校验密码，拿到 token 写入 cookie。失败时抛出后端返回的错误信息。
 export const login = async (password: string): Promise<void> => {
   const res = await fetch(parseApiPath("/login"), {

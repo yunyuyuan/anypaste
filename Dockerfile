@@ -36,7 +36,8 @@ COPY --from=backend /src/cli-dist /app/cli-dist
 COPY --from=backend --chown=65532:65532 /data /data
 ENV ADDR=:8080 \
     DB_PATH=/data/data.db \
-    UPLOAD_DIR=/data/uploads
+    UPLOAD_DIR=/data/uploads \
+    CONFIG_PATH=/data/config.json
 EXPOSE 8080
 VOLUME ["/data"]
 ENTRYPOINT ["/app/anypaste"]

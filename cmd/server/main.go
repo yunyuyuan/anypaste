@@ -8,6 +8,7 @@ import (
 	"yunyuyuan/anypaste/gen/paste/v1/pastev1connect"
 	"yunyuyuan/anypaste/internal/auth"
 	"yunyuyuan/anypaste/internal/cleanup"
+	"yunyuyuan/anypaste/internal/config"
 	"yunyuyuan/anypaste/internal/handler"
 	"yunyuyuan/anypaste/internal/model"
 	"yunyuyuan/anypaste/internal/service"
@@ -20,17 +21,18 @@ import (
 )
 
 func main() {
-	// 开发时加载 .env.local；文件不存在不报错（生产用真实环境变量）。
+	// 开发时加载 .env.local；文件不存在不报错（仅用于覆盖 ADDR/路径等，不再存密钥）。
 	_ = godotenv.Load(".env.local")
 
-	// 缺关键密钥时只告警、不阻止启动（方便首次试跑），但功能会受影响。
-	for _, e := range []struct{ key, impact string }{
-		{"APP_PASSWD", "login will always fail"},
-		{"JWT_SECRET", "tokens are signed with an empty secret (insecure)"},
-	} {
-		if os.Getenv(e.key) == "" {
-			log.Printf("WARNING: %s is not set — %s", e.key, e.impact)
-		}
+	// JWT 密钥与管理员密码哈希存配置文件（持久化在数据卷里），不再用环境变量。
+	// 首次启动若无密钥会自动随机生成并写回。
+	cfg, err := config.Load(utils.EnvOr("CONFIG_PATH", "config.json"))
+	if err != nil {
+		log.Fatalf("load config: %v", err)
+	}
+	auth.UseStore(cfg)
+	if !cfg.Initialized() {
+		log.Printf("no admin password set yet — open the app to create one")
 	}
 
 	// 数据位置可通过环境变量覆盖，便于容器里挂卷持久化。
@@ -62,6 +64,7 @@ func main() {
 	))
 	handler.RegisterFileHandler(apiMux, pasteService)
 	handler.RegisterLoginHandler(apiMux)
+	handler.RegisterInitHandler(apiMux)
 
 	// 根路由：/api/* 去掉前缀后交给 apiMux，其余交给内嵌前端（SPA，带 history fallback）。
 	spa, err := web.Handler()

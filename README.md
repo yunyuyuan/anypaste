@@ -19,33 +19,17 @@ cross-platform CLI for the terminal.
 
 ## Quick start
 
-The image is published to **`ghcr.io/yunyuyuan/anypaste`**.
-
-Two secrets are required:
-
-- `APP_PASSWD` — a **bcrypt hash** of your login password (not plaintext).
-- `JWT_SECRET` — a long random string used to sign sessions (keep it stable).
-
-Generate the password hash with the bundled tool (edit the literal inside
-`cmd/password/main.go`, then run it):
-
-```bash
-go run ./cmd/password    # prints the bcrypt hash
-```
+The image is published to **`ghcr.io/yunyuyuan/anypaste`**. No secrets to
+configure — just give it a volume:
 
 ### docker run
 
 ```bash
 docker run -d --name anypaste \
   -p 8080:8080 \
-  -e JWT_SECRET="$(openssl rand -base64 32)" \
-  -e APP_PASSWD='<bcrypt-hash>' \
   -v anypaste-data:/data \
   ghcr.io/yunyuyuan/anypaste:latest
 ```
-
-Open <http://localhost:8080> and log in. A fresh setup needs **no database
-file** — the server creates and migrates the SQLite DB on first boot.
 
 ### docker compose
 
@@ -55,9 +39,6 @@ services:
     image: ghcr.io/yunyuyuan/anypaste:latest
     ports:
       - "8080:8080"
-    environment:
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
-      APP_PASSWD: ${APP_PASSWD:?set APP_PASSWD in .env (bcrypt hash)}
     volumes:
       - anypaste-data:/data
     restart: unless-stopped
@@ -66,17 +47,29 @@ volumes:
   anypaste-data:
 ```
 
+### First run
+
+Open <http://localhost:8080>. On first launch the app shows a **setup page** —
+choose an admin password and you're in. Everything is created automatically:
+
+- the **JWT secret** is generated and saved to `config.json`;
+- the **admin password** (bcrypt-hashed) is saved there after you set it;
+- the **SQLite DB** is created and migrated.
+
+All of it lives under `/data`, so mount that as a volume to persist across
+upgrades. There are no required environment variables.
+
 ## Configuration
 
-| Variable     | Required | Default         | Notes                              |
-| ------------ | -------- | --------------- | ---------------------------------- |
-| `JWT_SECRET` | **yes**  | _(empty)_       | Random secret for signing JWTs.    |
-| `APP_PASSWD` | **yes**  | _(empty)_       | bcrypt hash of the login password. |
-| `ADDR`       | no       | `:8080`         | Listen address.                    |
-| `DB_PATH`    | no       | `/data/data.db` | SQLite file location.              |
-| `UPLOAD_DIR` | no       | `/data/uploads` | Uploaded files directory.          |
+Everything persists under `/data` (config, DB, uploads). The optional env vars
+only change paths/binding:
 
-`/data` holds the database and uploads — mount it as a volume to persist data.
+| Variable      | Default            | Notes                                   |
+| ------------- | ------------------ | --------------------------------------- |
+| `ADDR`        | `:8080`            | Listen address.                         |
+| `DB_PATH`     | `/data/data.db`    | SQLite file location.                   |
+| `UPLOAD_DIR`  | `/data/uploads`    | Uploaded files directory.               |
+| `CONFIG_PATH` | `/data/config.json`| JWT secret + admin password hash.       |
 
 > **Persistence note:** the container runs rootless (uid `65532`). Named volumes
 > (as above) work as-is. For a **host bind mount**, `chown 65532:65532` the host
@@ -113,7 +106,8 @@ git push origin v1.0.0
 ## Development
 
 ```bash
-# backend (loads .env.local for JWT_SECRET / APP_PASSWD)
+# backend (writes config.json + data.db in the working dir; first run prompts
+# for an admin password via the web UI)
 go run ./cmd/server
 
 # frontend (Vite dev server, proxies /api to the backend)
