@@ -377,12 +377,18 @@ func uploadFile(server, token, id, path string) (err error) {
 		return err
 	}
 
+	bar := newProgressBar(total, offset)
+	bar.render(offset, true)
+
 	// sendChunk posts one chunk with bounded retries, re-syncing the offset from
 	// the server between attempts (covers partially-received chunks and 409s).
 	sendChunk := func(off, size int64) (int64, error) {
 		for attempt := 0; ; attempt++ {
-			next, sendErr := postChunk(server, token, id, f, off, size, total, encName)
+			base := off
+			next, sendErr := postChunk(server, token, id, f, off, size, total, encName,
+				func(sent int64) { bar.render(base+sent, false) })
 			if sendErr == nil {
+				bar.render(next, false)
 				return next, nil
 			}
 			if attempt >= maxChunkRetries {
@@ -402,7 +408,6 @@ func uploadFile(server, token, id, path string) (err error) {
 			return err
 		}
 		offset = next
-		fmt.Fprintf(os.Stderr, "\ruploading %3d%%", int(offset*100/total))
 	}
 	// A zero-byte file still needs one request to create and finalize it.
 	if total == 0 {
@@ -410,9 +415,7 @@ func uploadFile(server, token, id, path string) (err error) {
 			return err
 		}
 	}
-	if total > 0 {
-		fmt.Fprintln(os.Stderr)
-	}
+	bar.done()
 	return nil
 }
 
@@ -440,10 +443,14 @@ func uploadOffset(server, token, id string) (int64, error) {
 
 // postChunk sends bytes [off, off+size) of f and returns the server's new
 // offset. A SectionReader keeps the file streamed, never fully buffered.
-func postChunk(server, token, id string, f *os.File, off, size, total int64, encName string) (int64, error) {
+func postChunk(server, token, id string, f *os.File, off, size, total int64, encName string, onProgress func(int64)) (int64, error) {
 	var body io.Reader = http.NoBody
 	if size > 0 {
-		body = io.NewSectionReader(f, off, size)
+		var r io.Reader = io.NewSectionReader(f, off, size)
+		if onProgress != nil {
+			r = &progressReader{r: r, cb: onProgress}
+		}
+		body = r
 	}
 	req, err := http.NewRequest(http.MethodPost, server+"/file/upload/"+id, body)
 	if err != nil {
@@ -466,6 +473,90 @@ func postChunk(server, token, id string, f *os.File, off, size, total int64, enc
 		return 0, fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(data)))
 	}
 	return strconv.ParseInt(resp.Header.Get(uploadproto.HeaderUploadOffset), 10, 64)
+}
+
+// progressReader counts bytes read from the wrapped reader and reports the
+// running total via cb — drives the upload bar byte-by-byte as the body streams.
+type progressReader struct {
+	r  io.Reader
+	n  int64
+	cb func(int64)
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.r.Read(p)
+	if n > 0 {
+		pr.n += int64(n)
+		pr.cb(pr.n)
+	}
+	return n, err
+}
+
+// progressBar draws an upload progress line to stderr, but only when stderr is a
+// terminal — so piped/redirected runs and the paste id on stdout stay clean.
+type progressBar struct {
+	total      int64
+	startBytes int64 // bytes already present at start (resume) — excluded from speed
+	start      time.Time
+	last       time.Time
+	enabled    bool
+}
+
+func newProgressBar(total, done0 int64) *progressBar {
+	return &progressBar{
+		total:      total,
+		startBytes: done0,
+		start:      time.Now(),
+		enabled:    total > 0 && term.IsTerminal(int(os.Stderr.Fd())),
+	}
+}
+
+// render redraws the bar for `done` bytes uploaded, throttled to ~10 fps unless
+// force is set (initial draw and completion).
+func (p *progressBar) render(done int64, force bool) {
+	if !p.enabled {
+		return
+	}
+	now := time.Now()
+	if !force && now.Sub(p.last) < 100*time.Millisecond {
+		return
+	}
+	p.last = now
+	if done > p.total {
+		done = p.total
+	}
+	frac := float64(done) / float64(p.total)
+	const width = 30
+	filled := int(frac * width)
+	bar := strings.Repeat("=", filled) + strings.Repeat(" ", width-filled)
+	var speed float64
+	if el := now.Sub(p.start).Seconds(); el > 0 {
+		speed = float64(done-p.startBytes) / el
+	}
+	fmt.Fprintf(os.Stderr, "\r  uploading [%s] %3.0f%%  %s / %s  %s/s   ",
+		bar, frac*100, humanBytes(done), humanBytes(p.total), humanBytes(int64(speed)))
+}
+
+func (p *progressBar) done() {
+	if !p.enabled {
+		return
+	}
+	p.render(p.total, true)
+	fmt.Fprintln(os.Stderr)
+}
+
+// humanBytes formats a byte count like "4.2 MB".
+func humanBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for x := n / unit; x >= unit; x /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
 func cmdDown(args []string) error {
