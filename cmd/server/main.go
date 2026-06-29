@@ -76,7 +76,9 @@ func main() {
 	// 纯文本 CLI 指南，给 `curl <host>/help` 用（根路径，不在 /api 下）
 	handler.RegisterHelpHandler(root)
 	// CLI 二进制挂在根 /cli/（公开、干净的 curl 下载地址，与 web 的 /api 解耦）
-	handler.RegisterCLIHandler(root)
+	if err := handler.RegisterCLIHandler(root); err != nil {
+		log.Fatalf("init cli: %v", err)
+	}
 	root.Handle("/", spa)
 
 	addr := utils.EnvOr("ADDR", ":8080")

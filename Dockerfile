@@ -1,39 +1,24 @@
 # syntax=docker/dockerfile:1
+#
+# Minimal runtime image. The Go server is cross-compiled on the CI host (see
+# .github/workflows/release.yml, `build` job) — that produces server-dist/
+# binaries with the frontend and the CLI downloads already embedded. This
+# Dockerfile just packages the right one into a distroless image.
+#
+# Build context expects:  server-dist/anypaste-server-linux-<arch>
+# Use docker buildx with --platform linux/amd64,linux/arm64; TARGETARCH picks
+# the right pre-built binary per arch.
 
-# 1) Build the frontend. JS output is arch-independent, so this always runs on
-#    the build host (fast, no emulation).
-FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend
-WORKDIR /app/web
-RUN corepack enable && corepack prepare pnpm@10 --activate
-COPY web/package.json web/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-COPY web/ ./
-RUN pnpm build
-
-# 2) Build the Go server, cross-compiled to the target arch, with the frontend
-#    embedded. Pure-Go sqlite means CGO can stay off → fully static binary.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS backend
-WORKDIR /src
-RUN apk add --no-cache bash
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-# Embed the built frontend, then build the multi-platform CLI binaries that the
-# server hands out at /cli (linked from the /help page).
-COPY --from=frontend /app/web/dist ./internal/web/dist
-RUN bash scripts/build-cli.sh
-# A pre-owned data dir so the named volume is writable by the nonroot user.
+# Tiny prep stage just to create /data with the right ownership for the
+# distroless nonroot user (distroless has no shell / chown).
+FROM --platform=$BUILDPLATFORM alpine:3 AS prep
 RUN mkdir -p /data
-ARG TARGETOS TARGETARCH
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -trimpath -ldflags "-s -w" -o /out/anypaste ./cmd/server
 
-# 3) Minimal, rootless runtime image.
 FROM gcr.io/distroless/static-debian12:nonroot
+ARG TARGETARCH
 WORKDIR /app
-COPY --from=backend /out/anypaste /app/anypaste
-COPY --from=backend /src/cli-dist /app/cli-dist
-COPY --from=backend --chown=65532:65532 /data /data
+COPY server-dist/anypaste-server-linux-${TARGETARCH} /app/anypaste
+COPY --from=prep --chown=65532:65532 /data /data
 ENV ADDR=:8080 \
     DB_PATH=/data/data.db \
     UPLOAD_DIR=/data/uploads \

@@ -1,11 +1,5 @@
-.git
-.github
-**/node_modules
-web/dist
-cli-dist
-data.db
-/uploads
-*.exe
-.env
-.env.*
-*.md
+# The build context only needs the two pre-built linux server binaries.
+# Exclude everything else (including windows/darwin binaries and source code).
+*
+!server-dist/anypaste-server-linux-amd64
+!server-dist/anypaste-server-linux-arm64

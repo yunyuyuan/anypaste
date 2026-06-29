@@ -10,19 +10,81 @@ on:
     tags:
       - "v*"
 
-# Least privilege: read the repo, write packages (GHCR).
-permissions:
-  contents: read
-  packages: write
+# Three jobs:
+#   build   — compile the frontend, CLI, and server once on the host (native
+#             cross-compile is faster than QEMU inside Docker), and share the
+#             output via an artifact.
+#   docker  — package the pre-built linux binaries into a multi-arch image.
+#   release — attach the same pre-built binaries to a GitHub Release.
+#
+# Per-job least privilege (see each job's `permissions`).
 
 jobs:
-  docker:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
-      # QEMU lets one runner build the arm64 image as well as amd64.
-      - uses: docker/setup-qemu-action@v3
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      # Frontend → embedded into the server binary.
+      - name: Build frontend
+        run: cd web && pnpm install --frozen-lockfile && pnpm build
+      - name: Embed frontend
+        run: |
+          rm -rf internal/web/dist
+          cp -r web/dist internal/web/dist
+
+      # CLI → uploaded to the release AND embedded into the server (so the
+      # server hands the CLI out at /cli/ regardless of how it's deployed).
+      - name: Build CLI binaries
+        run: bash scripts/build-cli.sh
+      - name: Embed CLI
+        run: cp cli-dist/* internal/clibin/bin/
+
+      # Server → uploaded to the release; the two linux/* binaries are also
+      # consumed by the docker job below.
+      - name: Build server binaries
+        run: bash scripts/build-server.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            cli-dist
+            server-dist
+          if-no-files-found: error
+          retention-days: 1
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    # Read the repo (for the Dockerfile), write packages (GHCR).
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries
+      # upload/download-artifact can drop the executable bit — set it back so
+      # the binary copied into the image is runnable.
+      - name: Ensure binaries executable
+        run: chmod +x server-dist/*
+
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
@@ -43,6 +105,9 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
 
+      # No QEMU needed: the Dockerfile only COPYs pre-built binaries (no RUN
+      # steps execute the target-arch userspace), so buildx can produce the
+      # arm64 image natively.
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -51,6 +116,22 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Layer cache across releases via the GitHub Actions cache backend.
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    # Write access is needed to create the release and upload its assets.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Auto-generate notes from commits/PRs since the previous tag.
+          generate_release_notes: true
+          files: |
+            server-dist/*
+            cli-dist/*

@@ -59,6 +59,23 @@ choose an admin password and you're in. Everything is created automatically:
 All of it lives under `/data`, so mount that as a volume to persist across
 upgrades. There are no required environment variables.
 
+### Without Docker
+
+Prefer a plain binary? Grab the latest **`anypaste-server-<os>-<arch>`** from the
+[**Releases**](https://github.com/yunyuyuan/anypaste/releases) page — the frontend
+and the CLI downloads (served at `/cli`) are embedded, so it's a single
+self-contained file:
+
+```bash
+# Linux/macOS — make it executable and run; it listens on :8080 and stores its
+# config.json, data.db, and uploads/ in the working directory.
+chmod +x anypaste-server-linux-amd64
+./anypaste-server-linux-amd64
+```
+
+Paths and the listen address are configurable via the env vars in
+[Configuration](#configuration).
+
 ## Configuration
 
 Everything persists under `/data` (config, DB, uploads). The optional env vars
@@ -81,8 +98,10 @@ only change paths/binding:
 
 ## CLI
 
-After logging into the web UI, open **`/help`** to download the CLI for your
-platform and see the full command reference.
+Download the CLI for your platform from the
+[**Releases**](https://github.com/yunyuyuan/anypaste/releases) page
+(**`anypaste-<os>-<arch>`**), or — once your server is running — from its
+**`/help`** page, which also has the full command reference.
 
 ```bash
 anypaste login --server https://your-host/api
@@ -90,17 +109,6 @@ anypaste up -m "a quick note"
 anypaste up ./report.pdf
 anypaste ls
 anypaste down <id> -o ./report.pdf
-```
-
-## Releasing
-
-Pushing a version tag builds and publishes the multi-arch image to GHCR
-([`.github/workflows/release.yml`](.github/workflows/release.yml)) — nothing
-runs on ordinary pushes:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
 ```
 
 ## Development
