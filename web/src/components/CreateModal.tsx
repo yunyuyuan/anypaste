@@ -5,6 +5,71 @@ import { Modal, Button, Label, TextField, TextArea, ProgressBar, toast } from '@
 import { Loader2, Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 
+// 分片续传协议常量，与 internal/uploadproto 保持一致
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MiB
+const H_OFFSET = "Upload-Offset";
+const H_LENGTH = "Upload-Length";
+const H_FILENAME = "Upload-Filename";
+const MAX_CHUNK_RETRIES = 5;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const authHeaders = (): Record<string, string> => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// uploadOffset：HEAD 查询服务器已收到的字节数，作为（续传）起点
+const uploadOffset = async (id: string): Promise<number> => {
+  const res = await fetch(parseApiPath(`/file/upload/${id}`), {
+    method: "HEAD",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error((await res.text()).trim() || `Resume check failed (${res.status})`);
+  }
+  return Number(res.headers.get(H_OFFSET) ?? 0);
+};
+
+// postChunk：用 XHR 发送单个分片（以便监听进度），返回服务器的新偏移量
+const postChunk = (
+  id: string,
+  blob: Blob,
+  offset: number,
+  total: number,
+  filename: string,
+  onProgress: (loaded: number) => void,
+): Promise<number> =>
+  new Promise<number>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", parseApiPath(`/file/upload/${id}`));
+    const token = getToken();
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+    xhr.setRequestHeader(H_OFFSET, String(offset));
+    xhr.setRequestHeader(H_LENGTH, String(total));
+    xhr.setRequestHeader(H_FILENAME, encodeURIComponent(filename));
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress(event.loaded);
+      }
+    };
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve(Number(xhr.getResponseHeader(H_OFFSET) ?? offset + blob.size))
+        : reject(
+          new Error(
+            // 服务器用 http.Error 把真实原因写在 body 里，优先展示它
+            xhr.responseText.trim() ||
+            xhr.statusText ||
+            `Upload failed (${xhr.status})`,
+          ),
+        );
+    xhr.onerror = () => reject(new Error("Network error"));
+    xhr.send(blob);
+  });
+
 export default function () {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -18,39 +83,34 @@ export default function () {
 
   const { mutate: createItem } = useMutation(createPaste);
 
-  // 用 XMLHttpRequest 上传，以便监听上传进度
-  const uploadFile = (id: string, theFile: File) =>
-    new Promise<void>((resolve, reject) => {
-      const formData = new FormData();
-      formData.append("file", theFile);
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", parseApiPath(`/file/upload/${id}`));
-      // 上传走原生 XHR，需手动带上鉴权头（token 存在 cookie）
-      const token = getToken();
-      if (token) {
-        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+  // 分片续传：HEAD 取已传偏移量后逐块 POST，可抵御 CF 这类代理的体积/超时限制，断点续传
+  const uploadFile = async (id: string, theFile: File) => {
+    const total = theFile.size;
+    let offset = await uploadOffset(id);
+    setUploadProgress(total > 0 ? Math.round((offset / total) * 100) : 0);
+
+    let attempts = 0;
+    while (offset < total) {
+      const base = offset;
+      const end = Math.min(base + CHUNK_SIZE, total);
+      try {
+        offset = await postChunk(id, theFile.slice(base, end), base, total, theFile.name, (loaded) =>
+          setUploadProgress(Math.round(((base + loaded) / total) * 100)),
+        );
+        attempts = 0;
+        setUploadProgress(Math.round((offset / total) * 100));
+      } catch (err) {
+        // 单块失败：有限次重试，每次先向服务器重新对齐偏移量（覆盖 409/半包）
+        if (++attempts > MAX_CHUNK_RETRIES) throw err;
+        await sleep(attempts * 500);
+        offset = await uploadOffset(id).catch(() => base);
       }
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          setUploadProgress(Math.round((event.loaded / event.total) * 100));
-        }
-      };
-      // 字节发送完毕，但服务器还在处理：切到不确定态
-      xhr.upload.onload = () => setProcessing(true);
-      xhr.onload = () =>
-        xhr.status >= 200 && xhr.status < 300
-          ? resolve()
-          : reject(
-            new Error(
-              // 服务器用 http.Error 把真实原因写在 body 里，优先展示它
-              xhr.responseText.trim() ||
-              xhr.statusText ||
-              `Upload failed (${xhr.status})`,
-            ),
-          );
-      xhr.onerror = () => reject(new Error("Network error"));
-      xhr.send(formData);
-    });
+    }
+    // 空文件也要发一次请求来创建并 finalize
+    if (total === 0) {
+      await postChunk(id, theFile.slice(0, 0), 0, 0, theFile.name, () => {});
+    }
+  };
 
   // 上传文件，失败时弹 toast 让用户重试（服务器支持重试）
   const runUpload = (id: string, theFile: File, onDone: () => void) => {

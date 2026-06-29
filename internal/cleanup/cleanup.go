@@ -15,6 +15,14 @@ import (
 // row records the name, so we never touch very recent files.
 const minAge = time.Hour
 
+// partialDir mirrors handler.PartialDir — the subdir holding in-progress
+// resumable uploads (.part files). Kept as a literal to avoid importing handler.
+const partialDir = ".partial"
+
+// partialMaxAge is how long an untouched .part file lingers before it's treated
+// as abandoned. Generous so a paused/slow resumable upload isn't reaped mid-flight.
+const partialMaxAge = 24 * time.Hour
+
 // FileLister yields the file names still referenced by some paste.
 type FileLister interface {
 	ReferencedFileNames(ctx context.Context) ([]string, error)
@@ -75,5 +83,39 @@ func run(ctx context.Context, lister FileLister, uploadDir string) error {
 	if removed > 0 {
 		log.Printf("uploads cleanup: removed %d orphaned file(s)", removed)
 	}
+
+	sweepPartials(filepath.Join(uploadDir, partialDir))
 	return nil
+}
+
+// sweepPartials removes resumable-upload .part files that haven't been touched
+// in partialMaxAge — uploads the user abandoned (closed the tab, gave up). A
+// live or merely paused upload keeps a recent mtime and is left alone. The dir
+// may not exist yet (no upload ever started), which is not an error.
+func sweepPartials(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("uploads cleanup: read partials: %v", err)
+		}
+		return
+	}
+	var removed int
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil || time.Since(info.ModTime()) < partialMaxAge {
+			continue
+		}
+		if err := os.Remove(filepath.Join(dir, e.Name())); err != nil {
+			log.Printf("uploads cleanup: remove partial %s: %v", e.Name(), err)
+			continue
+		}
+		removed++
+	}
+	if removed > 0 {
+		log.Printf("uploads cleanup: removed %d abandoned partial upload(s)", removed)
+	}
 }

@@ -39,9 +39,12 @@ jobs:
         with:
           go-version: "1.26"
 
-      # Frontend → embedded into the server binary.
+      # Frontend → embedded into the server binary. VITE_APP_VERSION (the git
+      # tag) is baked in so the web UI can show its version and check for updates.
       - name: Build frontend
         run: cd web && pnpm install --frozen-lockfile && pnpm build
+        env:
+          VITE_APP_VERSION: ${{ github.ref_name }}
       - name: Embed frontend
         run: |
           rm -rf internal/web/dist
@@ -130,8 +133,16 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # Auto-generate notes from commits/PRs since the previous tag.
+          # `body` is prepended to the auto-generated commit/PR changelog.
           generate_release_notes: true
+          body: |
+            ### Which file do I want?
+
+            - **`anypaste-server-<os>-<arch>`** — the **server**: this is what you
+              deploy / self-host. The web UI and CLI are embedded, so it's a single
+              file. (Or run the Docker image `ghcr.io/yunyuyuan/anypaste:latest`.)
+            - **`anypaste-<os>-<arch>`** — the **CLI**: install this to use a running
+              server from your terminal (`anypaste up` / `ls` / `down`).
           files: |
             server-dist/*
             cli-dist/*

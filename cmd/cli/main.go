@@ -13,11 +13,14 @@ import (
 	"fmt"
 	"io"
 	"mime"
-	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
+	"yunyuyuan/anypaste/internal/uploadproto"
 
 	"golang.org/x/term"
 )
@@ -93,7 +96,10 @@ func saveConfig(c config) error {
 	return os.WriteFile(p, data, 0o600)
 }
 
-// resolveServer picks the server URL from the flag, then config, then env.
+// resolveServer picks the server URL from the flag, then config, then env, and
+// normalizes it: the user supplies just the host (e.g. https://paste.example.com)
+// and we append the /api prefix every endpoint lives under. An explicit /api
+// (the old form) is kept as-is so existing configs keep working.
 func resolveServer(flagVal string, c config) string {
 	s := flagVal
 	if s == "" {
@@ -102,7 +108,14 @@ func resolveServer(flagVal string, c config) string {
 	if s == "" {
 		s = os.Getenv("ANYPASTE_SERVER")
 	}
-	return strings.TrimRight(s, "/")
+	s = strings.TrimRight(s, "/")
+	if s == "" {
+		return ""
+	}
+	if !strings.HasSuffix(s, "/api") {
+		s += "/api"
+	}
+	return s
 }
 
 // --- Connect protocol (unary JSON) -----------------------------------------
@@ -333,51 +346,126 @@ func cmdUp(args []string) error {
 	return nil
 }
 
-func uploadFile(server, token, id, path string) error {
+// maxChunkRetries bounds per-chunk retries; a flaky link converges instead of
+// failing the whole upload on the first network blip.
+const maxChunkRetries = 5
+
+// uploadFile sends path to the server as a sequence of resumable chunks (see
+// internal/uploadproto). Small per-request bodies clear proxies with tight
+// size/timeout limits (e.g. Cloudflare free tier), and a dropped connection
+// resumes from the server's offset instead of restarting.
+func uploadFile(server, token, id, path string) (err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-
 	defer func() {
-		err = f.Close()
-	}()
-	// Stream the multipart body through a pipe so the file is never fully buffered.
-	pr, pw := io.Pipe()
-	mw := multipart.NewWriter(pw)
-	go func() {
-		part, err := mw.CreateFormFile("file", filepath.Base(path))
-		if err == nil {
-			_, err = io.Copy(part, f)
+		if cerr := f.Close(); err == nil {
+			err = cerr
 		}
-		if err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
-		_ = pw.CloseWithError(mw.Close())
 	}()
-
-	req, err := http.NewRequest(http.MethodPost, server+"/file/upload/"+id, pr)
+	info, err := f.Stat()
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", mw.FormDataContentType())
+	total := info.Size()
+	encName := url.QueryEscape(filepath.Base(path))
+
+	// Resume from whatever the server already holds for this paste.
+	offset, err := uploadOffset(server, token, id)
+	if err != nil {
+		return err
+	}
+
+	// sendChunk posts one chunk with bounded retries, re-syncing the offset from
+	// the server between attempts (covers partially-received chunks and 409s).
+	sendChunk := func(off, size int64) (int64, error) {
+		for attempt := 0; ; attempt++ {
+			next, sendErr := postChunk(server, token, id, f, off, size, total, encName)
+			if sendErr == nil {
+				return next, nil
+			}
+			if attempt >= maxChunkRetries {
+				return 0, fmt.Errorf("at offset %d: %w", off, sendErr)
+			}
+			time.Sleep(time.Duration(attempt+1) * 500 * time.Millisecond)
+			if synced, serr := uploadOffset(server, token, id); serr == nil {
+				off = synced
+				size = min(uploadproto.ChunkSize, total-off)
+			}
+		}
+	}
+
+	for offset < total {
+		next, err := sendChunk(offset, min(uploadproto.ChunkSize, total-offset))
+		if err != nil {
+			return err
+		}
+		offset = next
+		fmt.Fprintf(os.Stderr, "\ruploading %3d%%", int(offset*100/total))
+	}
+	// A zero-byte file still needs one request to create and finalize it.
+	if total == 0 {
+		if _, err := sendChunk(0, 0); err != nil {
+			return err
+		}
+	}
+	if total > 0 {
+		fmt.Fprintln(os.Stderr)
+	}
+	return nil
+}
+
+// uploadOffset asks the server (HEAD) how many bytes it already has for this
+// paste, i.e. where to start or resume.
+func uploadOffset(server, token, id string) (int64, error) {
+	req, err := http.NewRequest(http.MethodHead, server+"/file/upload/"+id, nil)
+	if err != nil {
+		return 0, err
+	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	defer func() {
-		err = resp.Body.Close()
-	}()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		data, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(data)))
+		return 0, fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(data)))
 	}
-	return nil
+	return strconv.ParseInt(resp.Header.Get(uploadproto.HeaderUploadOffset), 10, 64)
+}
+
+// postChunk sends bytes [off, off+size) of f and returns the server's new
+// offset. A SectionReader keeps the file streamed, never fully buffered.
+func postChunk(server, token, id string, f *os.File, off, size, total int64, encName string) (int64, error) {
+	var body io.Reader = http.NoBody
+	if size > 0 {
+		body = io.NewSectionReader(f, off, size)
+	}
+	req, err := http.NewRequest(http.MethodPost, server+"/file/upload/"+id, body)
+	if err != nil {
+		return 0, err
+	}
+	req.ContentLength = size
+	req.Header.Set(uploadproto.HeaderUploadOffset, strconv.FormatInt(off, 10))
+	req.Header.Set(uploadproto.HeaderUploadLength, strconv.FormatInt(total, 10))
+	req.Header.Set(uploadproto.HeaderUploadFilename, encName)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		data, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(data)))
+	}
+	return strconv.ParseInt(resp.Header.Get(uploadproto.HeaderUploadOffset), 10, 64)
 }
 
 func cmdDown(args []string) error {

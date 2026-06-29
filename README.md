@@ -7,7 +7,7 @@ cross-platform CLI for the terminal.
 ## Features
 
 - **Text pastes & file uploads** — create a note or upload any file; large
-  uploads stream with progress and resumable downloads (HTTP Range).
+  uploads and downloads resume after an interruption instead of starting over.
 - **Edit** — change a paste's content from the web UI.
 - **Manage** — list, view, copy, download, and delete from a clean web UI.
 - **Single-password auth** — log in with one admin password; the session is a
@@ -98,13 +98,15 @@ only change paths/binding:
 
 ## CLI
 
+The CLI is how you **use** a server from your terminal — uploading, listing, and
+downloading. (The server is the part you *deploy*; see [Quick start](#quick-start).)
 Download the CLI for your platform from the
 [**Releases**](https://github.com/yunyuyuan/anypaste/releases) page
 (**`anypaste-<os>-<arch>`**), or — once your server is running — from its
 **`/help`** page, which also has the full command reference.
 
 ```bash
-anypaste login --server https://your-host/api
+anypaste login --server https://your-host   # just the host — "/api" is added for you
 anypaste up -m "a quick note"
 anypaste up ./report.pdf
 anypaste ls

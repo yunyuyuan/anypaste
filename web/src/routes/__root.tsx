@@ -7,6 +7,7 @@ import { ToastProvider } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import LoginScreen from '#/components/LoginScreen';
 import InitScreen from '#/components/InitScreen';
+import Footer from '#/components/Footer';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -37,12 +38,15 @@ function RootComponent() {
   }
 
   return (
-    <>
-      <TransportProvider transport={rpcTransport}>
-        <QueryClientProvider client={queryClient}>
-          {screen}
-        </QueryClientProvider>
-      </TransportProvider>
+    <div className="flex min-h-screen flex-col">
+      <div className="flex-1">
+        <TransportProvider transport={rpcTransport}>
+          <QueryClientProvider client={queryClient}>
+            {screen}
+          </QueryClientProvider>
+        </TransportProvider>
+      </div>
+      <Footer />
       <ToastProvider placement="top" />
       {/* <TanStackDevtools
         config={{
@@ -55,6 +59,6 @@ function RootComponent() {
           },
         ]}
       /> */}
-    </>
+    </div>
   );
 }
